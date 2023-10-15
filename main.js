@@ -1,62 +1,71 @@
+import * as THREE from 'three';
+
 let scene, camera, renderer, cube;
 
-
-function init(){
-    // const { render } = require("react-dom/cjs/react-dom.production.min");
-
+function init() {
     scene = new THREE.Scene();
-    
-    // create a camera that has a 75 degree vertical field of view, 
-    //                            an aspect ratio that matches the browser window, 
-    //                            and will render objects between the near and far clipping planes
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
-    // create a renderer that will render the scene and camera using anti-aliasing to smooth out the edges
-    renderer = new THREE.WebGLRenderer({antialias: true});
-    
-    // set canvas size that renderer takes
+
+    // create a cube
+    const geometry = new THREE.SphereGeometry(50, 50, 50);
+    const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    // create a renderer and add it to the DOM
+    const canvas = document.querySelector('.webgl');
+    renderer = new THREE.WebGLRenderer({ canvas });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    // append renderer to the body
     document.body.appendChild(renderer.domElement);
-    
-    // create a box and add it to the scene
-    const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-    const texture = new THREE.TextureLoader().load('textures/crate.gif');
-    const material = new THREE.MeshBasicMaterial( { color: 0x0000ff } );
-    // const material = new THREE.MeshBasicMaterial( { map:texture } );
-    cube = new THREE.Mesh( geometry, material );
-    scene.add( cube );
-    
-    // move the camera out a bit so that we can see the cube
-    camera.position.z = 5;
+
+    // create a light effect that will illuminate the cube
+    const pointLight = new THREE.PointLight(0xffffff, 5, 100);
+    pointLight.position.set(50, 50, 50);
+    pointLight.castShadow = true; // Enable shadow casting for the light
+    scene.add(pointLight);
+
+
+    // create a persepective cameraa and adjust the initial position away from cube
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 150; // Adjust the initial camera position
+    scene.add(camera);
 }
 
-function animate(){
-    // create a loop that renders the scene every time the screen is refreshed
+function animate() {
     requestAnimationFrame(animate);
 
-    // rotate the cube a bit on each frame
     cube.rotation.x += 0.01;
     cube.rotation.y += 0.01;
 
-    // render both the scene and the camera
     renderer.render(scene, camera);
 }
 
-function onWindowResize(){
-    // update the camera aspect ratio and renderer canvas size
+function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// call onWindowResize() when the browser window is resized so it stays centered
 window.addEventListener('resize', onWindowResize, false);
-
-// window.onload = function() {
-//     alert("hi");
-// };
 
 init();
 animate();
+
+import './style.css';
+import javascriptLogo from './javascript.svg';
+import { setupCounter } from './counter.js';
+
+document.querySelector('#app').innerHTML = `
+  <div>
+    <a href="https://vitejs.dev" target="_blank">
+    </a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
+      <img src="${javascriptLogo}" class="logo vanilla" alt="JavaScript logo" />
+    </a>
+    <h1>Hello Vite!</h1>
+    <div class="card">
+      <button id="counter" type="button"></button>
+    </div>
+  </div>
+`;
+
+setupCounter(document.querySelector('#counter'));
