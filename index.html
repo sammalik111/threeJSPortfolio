@@ -1,14 +1,84 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-121487836-1"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-121487836-1');
+    </script>
+
+    <title>PROJECT</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+      body {
+        font-family: Monospace;
+        background-color: #000000;
+        margin: 0px;
+        overflow: hidden;
+      }
+
+      #info {
+        color: #fff;
+        position: absolute;
+        top: 300px;
+        width: 100%;
+        text-align: center;
+        z-index: 100;
+        display:block;
+
+      }
+      
+      #download {
+        color: #000000;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 200px;
+        height: 50px;
+        text-align: center;
+        z-index: 10;
+        display:block;
+
+      }
+
+      a { color: skyblue }
+      .button { background:#999; color:#eee; padding:0.2em 0.5em; cursor:pointer }
+      .highlight { background:orange; color:#fff; }
+
+      span {
+        display: inline-block;
+        width: 60px;
+        float: left;
+        text-align: center;
+      }
+
+    </style>
   </head>
   <body>
-    <!-- <div id="app"></div> -->
-    <canvas class="webgl"></canvas>
+    <div id="info">
+      <div width = 400 id="text">Loading the scene... </div>
+      
+    </div>
+    
+
+    <script src="js/three.js"></script>
+    <script src="js/loaders/PLYLoader.js"></script>
+    <script src="js/controls/OrbitControls.js"></script>
+    <script src="js/Detector.js"></script>
+    <script src="js/FileSaver.js"></script>
+    
+    <script src="js/exporters/OBJExporter.js"></script>
+    
+    
+    <script type="text/javascript" src="js/dat.gui.js"></script>
+    <script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script> <!--swal2 model-->
+    <!-- <canvas class="webgl"></canvas> -->
     <script type="module" src="main.js"></script>
   </body>
 </html>
