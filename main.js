@@ -33,6 +33,9 @@ let cameraOrtho, sceneOrtho;
 //End line num of PCA data
 var endline = 43666;
 
+
+var controls;
+
 // Track bars
 var anth = new function() {
     this.STUDY = 1;
@@ -46,32 +49,52 @@ var anth = new function() {
     this.FileName = 'BioHuman';
     this.ExportGeometry = function() {
         if (!CheckLicense()) return;
-    
-        if (this.FileType == 'stl') {
-            ASCIIStlWriter.save(plyGeometry, this.FileName + "_" + ".stl");
-        } else if (this.FileType == 'obj') {
-            if (!plyGeometry || !(plyGeometry instanceof THREE.BufferGeometry || plyGeometry instanceof THREE.Geometry)) {
-                console.error("Invalid or undefined plyGeometry.");
-                return;
+
+
+        if (this.FileType === 'stl') {
+            // Export plyGeometry as STL
+            if (plyGeometry) {
+                ASCIIStlWriter.save(plyGeometry, this.FileName + "_model.stl");
             }
-    
-            // Create a mesh if geometry is not an Object3D
-            let objectToExport;
-            if (plyGeometry instanceof THREE.Object3D) {
-                objectToExport = geometry;
-            } else {
-                // Assuming a default material here, you might want to adjust this
-                let material = new THREE.MeshBasicMaterial();
-                objectToExport = new THREE.Mesh(plyGeometry, material);
+        
+            // Export objGeometry as STL
+            if (objGeometry) {
+                ASCIIStlWriter.save(objGeometry, this.FileName + "_wheelchair.stl");
             }
-    
-            var exporter = new OBJExporter();
-            var objString = exporter.parse(objectToExport);
-    
-            var blob = new Blob([objString], {type: 'text/plain'});
-            saveAs(blob, this.FileName + "_" + ".obj");
+        } else if (this.FileType === 'obj') {
+            // Export plyGeometry as OBJ
+            if (plyGeometry) {
+                let plyObjectToExport = createExportableObject(plyGeometry);
+                var plyExporter = new OBJExporter();
+                var plyObjString = plyExporter.parse(plyObjectToExport);
+                var plyBlob = new Blob([plyObjString], {type: 'text/plain'});
+                saveAs(plyBlob, this.FileName + "_model.obj");
+            }
+        
+            // Export objGeometry as OBJ
+            if (objGeometry) {
+                let objObjectToExport = createExportableObject(objGeometry);
+                var objExporter = new OBJExporter();
+                var objObjString = objExporter.parse(objObjectToExport);
+                var objBlob = new Blob([objObjString], {type: 'text/plain'});
+                saveAs(objBlob, this.FileName + "_wheelchair.obj");
+            }
         }
-    
+        
+        function createExportableObject(geometry) {
+            if (!geometry || !(geometry instanceof THREE.BufferGeometry || geometry instanceof THREE.Geometry)) {
+                console.error("Invalid or undefined geometry.");
+                return null;
+            }
+        
+            if (geometry instanceof THREE.Object3D) {
+                return geometry;
+            } else {
+                let material = new THREE.MeshBasicMaterial();
+                return new THREE.Mesh(geometry, material);
+            }
+        }
+        
         var parametervalue = 'p' + this.STUDY.toFixed() + 
         '_' + this.GENDER.toFixed() +
         '_' + this.STATURE.toFixed() +
@@ -391,8 +414,6 @@ function onDocumentMouseMove( event ) {
 
         // Mouse tooltip render function call
         render();
-        // Mouse tooltip render function call
-
         mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
         mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
         mouseWindow = new THREE.Vector2(event.clientX - window.innerWidth * 0.435, - event.clientY + window.innerHeight * 0.44);
@@ -401,27 +422,27 @@ function onDocumentMouseMove( event ) {
 }
 // Mouse tooltip onDocumentMouseMove
 
-// function setShadowedLight( directionalLight ) {
+function setShadowedLight( directionalLight ) {
 
-//     directionalLight.castShadow = true;
-//     // directionalLight.shadowCameraVisible = true;
+    directionalLight.castShadow = true;
+    // directionalLight.shadowCameraVisible = true;
 
-//     var d = 3;
-//     directionalLight.shadowCameraLeft = -d;
-//     directionalLight.shadowCameraRight = d;
-//     directionalLight.shadowCameraTop = d;
-//     directionalLight.shadowCameraBottom = -d;
+    var d = 3;
+    directionalLight.shadowCameraLeft = -d;
+    directionalLight.shadowCameraRight = d;
+    directionalLight.shadowCameraTop = d;
+    directionalLight.shadowCameraBottom = -d;
 
-//     directionalLight.shadowCameraNear = 0;
-//     directionalLight.shadowCameraFar = 6;
+    directionalLight.shadowCameraNear = 0;
+    directionalLight.shadowCameraFar = 6;
 
-//     directionalLight.shadowMapWidth = 4096;
-//     directionalLight.shadowMapHeight = 4096;
+    directionalLight.shadowMapWidth = 4096;
+    directionalLight.shadowMapHeight = 4096;
 
-//     directionalLight.shadowBias = -0.001;
-//     directionalLight.shadowDarkness = 0.2;
+    directionalLight.shadowBias = -0.001;
+    directionalLight.shadowDarkness = 0.2;
 
-// }
+}
 // from http://stackoverflow.com/questions/1293147/javascript-code-to-parse-csv-data
 function CSVToArray( strData, strDelimiter ){
     strDelimiter = (strDelimiter || ",");
@@ -470,43 +491,16 @@ function calcCoords(diffAnths, onePCAdata) {
     return diffCoords;
 }
 
-// function CSG2Geom(csg){
-//     if(csg.polygons[geometryCachekey]) return csg.polygons[geometryCachekey]
-
-//     const vertices = []
-//     const indices  = []
-//     let idx = 0
-
-//     const pointAdd = (v) =>{
-//         if (v.index === undefined){
-//         v.index = idx++
-//         vertices.push(v[0], v[1], v[2] || 0)
-//         }
-//     }
-
-//     for (let poly of csg.polygons){
-//         let arr = poly.vertices
-//         arr.forEach(pointAdd)
-//         let first = arr[0].index
-//         for(let i=2; i<arr.length; i++){
-//         indices.push(first, arr[i-1].index, arr[i].index)
-//         }
-//     }
-//     const geo = new THREE.BufferGeometry();
-//     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices),3))
-//     geo.setIndex(indices)
-
-//     csg.polygons[geometryCachekey] = geo
-
-//     return geo;
-// }
-
 
 // load the HUMAN model
 function loadPLYFile(PLYposx,PLYposy,PLYposz) {
     const loader = new PLYLoader();
     loader.load('model/mean_model_tri.ply', function (geometry) {
         plyGeometry = geometry;
+        // Ensure geometry normals are correct
+        if (!geometry.attributes.normal) {
+            geometry.computeVertexNormals();
+        }
         // Check if geometry needs to be processed as BufferGeometry
         if (geometry.isBufferGeometry) {
             // Process BufferGeometry
@@ -540,10 +534,12 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
         }
 
         // Create material and mesh
-        var material = new THREE.MeshLambertMaterial({
+                
+        var material = new THREE.MeshPhongMaterial({
             color: 0xffffff,
-            specular: 0xaaaaaa,
-            shininess: 20,
+            specular: 0xaaaaaa, // Adjust specular color for shiny effect
+            shininess: 20,      // Adjust shininess for glossiness
+            // Other properties like reflectivity can also be adjusted
             shading: THREE.SmoothShading
         });
 
@@ -556,7 +552,7 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
         plyMesh = new THREE.Mesh(geometry, material);
         plyMesh.rotation.set(-60 * (Math.PI / 180), 0, 90 * (Math.PI / 180));
         plyMesh.position.set(PLYposx, PLYposy, PLYposz);
-        plyMesh.scale.set(0.001, 0.001, 0.001);
+        plyMesh.scale.set(0.0011, 0.0011, 0.0011);
         plyMesh.castShadow = true;
         plyMesh.receiveShadow = true;
 
@@ -588,30 +584,36 @@ function loadAndAddOBJ(posx, posy, posz) {
     loader.load('_changes.obj', function (object) {
         object.scale.set(0.001, 0.001, 0.001);
 
-        // Use MeshStandardMaterial or MeshPhongMaterial for shading
         const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
 
         object.traverse(function (child) {
             if (child instanceof THREE.Mesh) {
                 child.material = material;
+                child.material.emissive = new THREE.Color(0x333333); // Soft glow
+                child.material.emissiveIntensity = 0.5; // Adjust intensity as needed
 
-                // If the model doesn't have vertex normals, compute them
                 if (!child.geometry.attributes.normal) {
                     child.geometry.computeVertexNormals();
+                }
+
+                // Set objGeometry for the first mesh found
+                if (!objGeometry) {
+                    objGeometry = child.geometry;
                 }
             }
         });
 
         object.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
-        object.position.set(posx-0.3, posy-0.5, posz-1.5);
-        
+        object.position.set(posx - 0.3, posy - 0.7, posz);
+
         removeObjMesh();
         objMesh = object;
         scene.add(objMesh);
 
-        loadPLYFile(posx, posy + 0.08, posz - 1.4);
+        loadPLYFile(posx, posy -0.08, posz+0.03);
     });
 }
+
 
 
 // init function
@@ -619,30 +621,25 @@ function init(data) {
     
     // save the PCA data as a global variable
     PCAdata = data;
-        
-    // model position in the scene
-    var centerHeight = -0.1;
 
     container = document.createElement( 'div' );
     document.body.appendChild( container );
 
     camera = new THREE.PerspectiveCamera( 100, window.innerWidth / window.innerHeight, 0.1, 100 );
-    camera.position.set( -10, 1.5, 1.0 );
-
-
+    camera.position.set( 0, 0, 0 );
     cameraTarget = new THREE.Vector3( 0, 0, 0 );
-
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog( 0x111111, 2, 15 );
 
-    //Mouse tooltip//
+
+    //Mouse tooltip
     cameraOrtho = new THREE.OrthographicCamera(window.innerWidth / -2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / -2, 1, 1000 );
     cameraOrtho.position.z = 10;
     sceneOrtho = new THREE.Scene();
-    //Mouse tooltip//
+
+
 
     // Ground
-    // console.log(THREE);
     plane = new THREE.Mesh(
         // new THREE.PlaneBufferGeometry( 40, 40 ),
         new THREE.PlaneGeometry( 40, 40 ),
@@ -651,60 +648,97 @@ function init(data) {
     plane.rotation.x = -Math.PI/2;
     plane.position.y = -1.2;
     scene.add( plane );
-
     plane.receiveShadow = true;
 
-    // Load your OBJ file and Plyfile using a library like three.js
-    loadAndAddOBJ(camera.position.x, camera.position.y, camera.position.z);
-
-    light1 = new THREE.DirectionalLight( 0xaaaaaa, 0.5);
-    light1.position.set( -0.5, 1, 0.5 );
-    scene.add( light1 );
-
-    light2 = new THREE.DirectionalLight( 0xffffff );
-    light2.position.set( -1, 1, 0 )
-    scene.add( light2 );
 
     // renderer
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setSize( window.innerWidth, window.innerHeight );
-
     renderer.setClearColor( scene.fog.color, 1 );
 
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
-
     renderer.shadowMapEnabled = true;
     renderer.shadowMapCullFace = THREE.CullFaceBack;
 
     // Mouse tooltip
     renderer.autoClear = false;
-    // Mouse tooltip
-
     container.appendChild( renderer.domElement );
 
-    // Assuming that 'camera', 'renderer', and 'OrbitControls' have been correctly set up
-    const controls = new OrbitControls(camera, renderer.domElement);
 
+
+    // Assuming that 'camera', 'renderer', and 'OrbitControls' have been correctly set up
+    controls = new OrbitControls(camera, renderer.domElement);
     // Set the minimum and maximum distance for zooming
     controls.minDistance = 0;
     controls.maxDistance = 50;
-
     // Set the target of the controls to the position of your object
-    controls.target.set(camera.position.x, camera.position.y, camera.position.z-1);
-
+    controls.target.set(camera.position.x, camera.position.y, camera.position.z-1.5);
+    // Load your OBJ file and Plyfile using a library like three.js
+    loadAndAddOBJ(controls.target.x, controls.target.y, controls.target.z);
     // Update controls to apply changes
     controls.update();
 
 
-    // resize
-    // window.addEventListener( 'resize', onWindowResize, false );
+
+    // Lights
+    light1 = new THREE.DirectionalLight( 0xaaaaaa, 0.5);
+    light1.position.set( -0.5, 1, 0.5 );
+    light1.intensity = 1.5; // Increase as needed
+
+    scene.add( light1 );
+
+    light2 = new THREE.DirectionalLight( 0xffffff );
+    light2.position.set( -1, 1, 0 )
+    light2.intensity = 1.5; // Increase as needed
+    scene.add( light2 );
+
+    setShadowedLight( light1 );
+    setShadowedLight( light2 );
+
+    var spotlight = new THREE.SpotLight(0xffffff); // Use white light or any color you prefer
+    spotlight.position.set(0, 0, 10); // Position the light at the origin or any desired position
+    // Set the target point to (0, 0, -2)
+    spotlight.target.position.set(0, 0, -1.4);
+    spotlight.intensity = 25; // Increase as needed
+    
+    scene.add(spotlight); // Add the spotlight to the scene
+    scene.add(spotlight.target); // Important to add the target to the scene as well
+
+    setShadowedLight( spotlight );
+        
+    
+
 
     // Mouse tooltip init
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
     document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-    // Mouse tooltip init
+
+    //testing camera position
+        // // Create a small red cube
+        // var cubeGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3); // Size of the cube
+        // var cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color
+        // var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    
+        // // Position the cube where the camera is looking
+        // // Assuming the camera is looking at the origin (0, 0, 0)
+        // cube.position.set(0, 0, 0);
+    
+        // // Add the cube to the scene
+        // scene.add(cube);
+
+        // // Create a green cube
+        // var greenCubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Adjust size as needed
+        // var greenCubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green color
+        // var greenCube = new THREE.Mesh(greenCubeGeometry, greenCubeMaterial);
+
+        // // Assuming you have set up OrbitControls for cameraOrtho
+        // // Set the green cube's position to the target of the camera
+        // greenCube.position.copy(controls.target); // Replace 'controls' with your OrbitControls instance
+
+        // // Add the green cube to the scene
+        // scene.add(greenCube);
 }
 
 
@@ -736,8 +770,8 @@ function animate() {
         oldSHS = anth.SHS;
         oldStd = anth.STUDY;
         
-        // loadPLYFile();
-        loadAndAddOBJ(camera.position.x, camera.position.y, camera.position.z);
+        // load PLY and obj;
+        loadAndAddOBJ(controls.target.x, controls.target.y, controls.target.z);
     }
 
     // Mouse tooltip
