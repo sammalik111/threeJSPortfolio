@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=UA-121487836-1"></script>
+		<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+
+		gtag('config', 'UA-121487836-1');
+		</script>
+
+		<title>UMTRI Online Automotive Posture Model</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 300px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+
+			}
+			
+			#download {
+				color: #000000;
+				position: absolute;
+				top: 10px;
+				left: 10px;
+				width: 200px;
+				height: 50px;
+				text-align: center;
+				z-index: 10;
+				display:block;
+
+			}
+
+			a { color: skyblue }
+			.button { background:#999; color:#eee; padding:0.2em 0.5em; cursor:pointer }
+			.highlight { background:orange; color:#fff; }
+
+			span {
+				display: inline-block;
+				width: 60px;
+				float: left;
+				text-align: center;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="info">
+			<div width = 400 id="text">Loading the scene... </div>
+			
+		</div>
+		
+
+		<script src="js/three.js"></script>
+		<script src="js/loaders/PLYLoader.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/FileSaver.js"></script>
+		
+		<script src="js/exporters/OBJExporter.js"></script>
+		
+		
+		<script type="text/javascript" src="js/dat.gui.js"></script>
+		<script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script> <!--swal2 model-->
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+		
+			// Global variables
+			var container;
+			var camera, cameraTarget, scene, renderer, controls;
+			var light1, light2;
+			var mesh, geometry, geometryZero, material;
+			var pointCloud, skeleton; // for landmark and skeleton meshes
+			var lmGeometry, lmMaterial, skgeometry, skmaterial;
+			var skelIds; // joint ids for drawing skeleton 
+			var PCAdata; 
+			var plane;
+			var oldStd, oldSHS, oldStt, oldBMI, oldGen, oldAge;
+			var boolTest = false;
+			var effect;
+			
+			var isLicenseAgreed = false;
+			
+			var predAnthNum = 28;
+			var predLandmarkNum = 119;
+			
+			var license ='<div class="myBox" style="text-align: left;"><p><strong>End-User License Agreement</strong></p><p>University of Michigan Office of Technology Transfer File: 2019-247</p><p>IMPORTANT &ndash; READ CAREFULLY: This Agreement is a legal agreement between &ldquo;LICENSEE&rdquo; (defined below) and The Regents of The University of Michigan, a constitutional corporation of the state of Michigan (&ldquo;MICHIGAN&rdquo;).</p><p>BACKGROUND</p><ol><li>Faculty at the University of Michigan have developed a proprietary application and related documentation, referred to as &ldquo;Online Body Shape Models&rdquo;, and further described in MICHIGAN Office of Technology File 2019-247 (hereinafter referred to as "MODEL"); and</li><li>LICENSEE desires to obtain, and MICHIGAN, consistent with its mission of education and research, desires to grant, a license to use the MODEL subject to the terms and conditions set forth below; and</li></ol><p>The parties therefore agree as follows:</p><ol><li>&nbsp;&nbsp; LICENSE</li><li>The term &ldquo;LICENSEE&rdquo; shall mean the person downloading the MODEL solely for personal use by that person on the personal equipment of that person</li><li>Subject to the terms and conditions of this Agreement, MICHIGAN hereby grants to LICENSEE a non-exclusive, non-transferable right to copy, download and use the MODEL solely by LICENSEE for academic, research, and non-commercial purposes.</li><li>LIMITATION OF LICENSE AND RESTRICTIONS</li><li>LICENSEE shall not translate, reverse engineer, decompile, disassemble, modify, create derivative works of or publicly display the MODEL, in whole or in part, unless expressly authorized by this Agreement.</li><li>LICENSEE agrees that it shall use the MODEL only for LICENSEE\'S sole and exclusive use, and shall not disclose, sell, license, or otherwise distribute the MODEL to any third party without the prior written consent of MICHIGAN. LICENSEE shall not assign this Agreement, and any attempt by LICENSEE to assign it shall be void from the beginning. LICENSEE agrees to secure and protect the MODEL and any copies in a manner consistent with the maintenance of MICHIGAN\'S rights in the MODEL and to take appropriate action by instruction or agreement with its employees who are permitted access to the MODEL in order to satisfy LICENSEE\'S obligations under this Agreement.</li><li>LICENSEE agrees that it shall include copyright notice &ldquo;Copyright 2018 The Regents of The University of Michigan &ndash; Biosciences Group UMTRI&rdquo; in all results, publications, presentations or other public displays of results which utilize the MODEL in whole or part.</li></ol><p>III. TITLE AND OWNERSHIP</p><ol><li>No ownership rights of MICHIGAN in the MODEL are conferred upon LICENSEE by this Agreement.</li><li>LICENSEE acknowledges MICHIGAN\'S proprietary rights in the MODEL and agrees to reproduce all copyright notices supplied by MICHIGAN on all copies of the MODEL, and on all MODEL outputs and copies of MODEL outputs.</li><li>DISCLAIMER OF WARRANTY AND LIMITATION OF LIABILITY</li><li>THE<strong> MODEL</strong> IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. <strong>MICHIGAN</strong> DOES NOT WARRANT THAT THE FUNCTIONS CONTAINED IN THE <strong>MODEL</strong> WILL MEET <strong>LICENSEE\'S </strong>REQUIREMENTS OR THAT OPERATION WILL BE UNINTERRUPTED OR ERROR FREE. MICHIGAN shall not be liable for special, indirect, incidental, or consequential damages with respect to any claim on account of or arising from this Agreement or use of the MODEL, even if MICHIGAN has been or is hereafter advised of the possibility of such damages. Because some states do not allow certain exclusions or limitations on implied warranties or of liability for consequential or incidental damages, the above exclusions may not apply to LICENSEE. In no event, however, will MICHIGAN be liable to LICENSEE, under any theory of recovery, in an amount in excess of the license fee paid by LICENSEE under this Agreement.</li><li>LICENSEE agrees that MICHIGAN has no obligation to provide to LICENSEE any maintenance, support, or update services. Should MICHIGAN provide any revised versions of the MODEL to LICENSEE, LICENSEE agrees that this license agreement shall apply to such revised versions.</li><li>The MODEL does not provide medical advice and is not intended as a sole means for patient diagnosis.&nbsp; It is not a substitute for professional medical advice, diagnosis or treatment.&nbsp; The MODEL is intended for informational purposes only.&nbsp; MICHIGAN does not warrant or guarantee the accuracy or completeness of the information in the MODEL and specifically disclaims any liability therefore.</li><li>WARRANTY OF LICENSEE</li></ol><p>LICENSEE warrants and represents that it will carefully review any documentation or instructional material provided by MICHIGAN.</p><ol><li>TERMINATION</li></ol><p>If LICENSEE at any time fails to abide by the terms of this Agreement, MICHIGAN shall have the right to immediately terminate the license granted herein, require the return or destruction of all copies of the MODEL from LICENSEE and certification in writing as to such return or destruction, and pursue any other legal or equitable remedies available.</p><p>VII. MISCELLANEOUS</p><ol><li>This Agreement shall be construed in accordance with the laws of the state of Michigan. Should LICENSEE for any reason bring a claim, demand, or other action against MICHIGAN, its agents or employees, arising out of this Agreement or the MODEL licensed herein, LICENSEE agrees to bring said claim only in the Michigan Court of Claims.</li><li>THIS AGREEMENT REPRESENTS THE COMPLETE AND EXCLUSIVE STATEMENT OF THE AGREEMENT BETWEEN<strong>MICHIGAN</strong> AND <strong>LICENSEE </strong>AND SUPERSEDES ALL PRIOR AGREEMENTS, PROPOSALS, REPRESENTATIONS AND OTHER COMMUNICATIONS, VERBAL OR WRITTEN, BETWEEN THEM WITH RESPECT TO USE OF THE<strong>MODEL</strong>. THIS AGREEMENT MAY BE MODIFIED ONLY WITH THE MUTUAL WRITTEN APPROVAL OF AUTHORIZED REPRESENTATIVES OF THE PARTIES.</li><li>The terms and conditions of this Agreement shall prevail notwithstanding any different, conflicting, or additional terms or conditions which may appear in any purchase order or other document submitted by LICENSEE. LICENSEE agrees that such additional or inconsistent terms are deemed rejected by MICHIGAN.</li><li>Unless otherwise exempt therefrom, LICENSEE agrees that it will be responsible for any sales, use or excise taxes imposed by any governmental unit in this transaction except income taxes.</li><li>LICENSEE acknowledges that the MODEL is of United States origin. LICENSEE agrees to comply with all applicable international and national laws that apply to the MODEL, including the United States Export Administration Regulations, as well as end-user, end-use, and destination restrictions issued by the United States.</li><li>All copies of the MODEL distributed by LICENSEE shall contain copyright notice in appropriate locations and forms.&nbsp; Such notices shall be consistent with any instructions which might be provided by MICHIGAN; and shall include all copyright and other notices in the form supplied by MICHIGAN</li><li>MICHIGAN and LICENSEE agree that any xerographically or electronically reproduced copy of this fully-executed agreement shall have the same legal force and effect as any copy bearing original signatures of the parties.</li></ol><p>&nbsp;</p></div>'
+			
+			// Mouse tooltip variables
+			let raycaster, intersects;
+			let mouse, INTERSECTED;
+			let particles;
+			var canvas1, context1, texture1;
+			var sprite1;
+			let cameraOrtho, sceneOrtho;
+			var pointNameMapping;
+			let mouseWindow;
+			// Mouse tooltip variables
+			// Mouse tooltip
+			function distanceRayToPoint(raycaster, pointCloud, pointIndex) {
+				return raycaster.ray.direction.distanceToSquared(pointCloud.geometry.vertices[pointIndex])
+			}
+			// Mouse tooltip
+
+			// Mouse tooltip render
+			function render() {
+
+				//const attributes = particles.geometry.attributes;
+				if (mouse.x == 0 && mouse.y == 0) return;
+				raycaster.setFromCamera( mouse, camera );
+				var closestPointIndex = 0;
+				var closestPointDistance = raycaster.ray.distanceToPoint(
+					GetWorldLandmark(pointCloud.geometry.vertices[0])
+				);
+				for (p = 1; p < predLandmarkNum; p++) {
+					var tempDistance = raycaster.ray.distanceToPoint(
+						GetWorldLandmark(pointCloud.geometry.vertices[p])
+					);
+					if (closestPointDistance > tempDistance) {
+						closestPointIndex = p;
+						closestPointDistance = tempDistance;
+					}
+				}
+				var is_detected = false;
+				// change color of point that is closest to mouse
+				for (p = 0; p < predLandmarkNum; p++) {
+					if(p == closestPointIndex && closestPointDistance < 0.05){
+						sprite1.visible = true;
+						is_detected = true;
+						var world_position = GetWorldLandmark(pointCloud.geometry.vertices[p]).add(raycaster.ray.direction.multiplyScalar(-0.5));
+						// update sprite position
+						sprite1.position.set( mouseWindow.x, mouseWindow.y, 0 );
+						pointCloud.geometry.colors[p]=new THREE.Color("rgb(0,0,255)");
+						// show tooltip
+						context1.clearRect(0,0,640,480);
+						var LmName = PCAdata[endline + predAnthNum + predLandmarkNum * 3 + p][0];
+						var message = LmName;
+						var metrics = context1.measureText(message);
+						context1.fillStyle = "rgba(0,0,0,0.95)"; // black border
+						context1.fillRect( 0,0, metrics.width+8,20+8);
+						context1.fillStyle = "rgba(255,255,255,0.95)"; // white filler
+						context1.fillRect( 2,2, metrics.width+4,20+4 );
+						context1.fillStyle = "rgba(0,0,0,1)"; // text color
+						context1.fillText( message, 4,20 );
+						texture1.needsUpdate = true;
+					}
+					else{
+						
+						pointCloud.geometry.colors[p]=new THREE.Color("rgb(255,0,0)");
+					}
+				}
+
+				if (!is_detected) {
+					sprite1.visible = false;
+				}
+
+				pointCloud.geometry.colorsNeedUpdate = true;
+			}
+
+			function GetWorldLandmark(localvertex)
+			{
+				var newPnt = new THREE.Vector3(localvertex.x, localvertex.y, localvertex.z);
+				return pointCloud.localToWorld(newPnt);
+			}
+			// Mouse tooltip render
+
+		  //End line num of PCA data
+			var endline = 43666;
+				
+			function getVersion() {
+				// Read version info
+				var xmlhttp;
+				if (window.XMLHttpRequest)
+				  {// code for IE7+, Firefox, Chrome, Opera, Safari
+				  xmlhttp=new XMLHttpRequest();
+				  }
+				else
+				  {// code for IE6, IE5
+				  xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+				  }
+				xmlhttp.open("GET","versioninfo.txt",false);
+				xmlhttp.send();
+				return xmlhttp.responseText;
+			}
+			
+			function getDateNow()
+			{
+				var today = new Date();
+				var dd = today.getDate();
+				var mm = today.getMonth()+1; //January is 0!
+				var yyyy = today.getFullYear();
+				
+				if(dd<10) {
+					dd='0'+dd
+				} 
+				
+				if(mm<10) {
+					mm='0'+mm
+				} 
+				
+				return yyyy+mm+dd;
+			}
+			
+			function CheckLicense()
+			{
+				if(isLicenseAgreed) return true;
+				
+				Swal.fire({
+						  title: 'End-User License Agreement',
+						  showCancelButton: true,
+						  width: '1000px',
+						  padding: '6em',
+						  confirmButtonColor: '#3085d6',
+						  cancelButtonColor: '#d33',
+						  heightAuto: true,
+						  confirmButtonText: 'Agreed',
+						  html: license
+					}).then((result) => {
+					  if (result.value) {
+						Swal.fire(
+						  'Agreed!',
+						  'Please try your download again',
+						  'success'
+						)
+							isLicenseAgreed = true;
+						}
+					});
+				
+				if(!isLicenseAgreed) return false;	
+				else return true;	
+			}
+			
+			
+			
+			// Track bars
+			var anth = new function() {
+				this.STUDY = 1;
+				this.GENDER = 1;
+				this.STATURE = 1700;
+				this.BMI = 26;
+				this.SHS = 0.52;
+				this.AGE = 40;
+				this.LandmarkView = false;
+				this.FileType = 'obj';
+				this.FileName = 'BioHuman';
+				this.ExportGeometry = function(){
+					
+					if(!CheckLicense()) return;
+						
+ 					// Read version info
+					var versionInfo = getVersion();
+					
+					/// get current day
+					var today =  getDateNow();
+
+			
+					if(this.FileType == 'stl'){
+
+						ASCIIStlWriter.save(geometry, this.FileName + "_"+today+ ".stl");
+					}
+					else if(this.FileType == 'obj')
+					{
+						var exporter = new THREE.OBJExporter();
+						var objreturn = exporter.parse(geometry);
+					
+						var blob = new Blob([objreturn], {type: 'text/plain'});
+  
+						saveAs(blob, this.FileName + "_"+today+ ".obj");
+  					}	
+					  
+					var parametervalue = 'p' + this.STUDY.toFixed() + 
+							'_' + this.GENDER.toFixed() +
+							'_' + this.STATURE.toFixed() +
+							'_' + this.BMI.toFixed(1) +
+							'_' + this.SHS.toFixed(2) +
+							'_' + this.AGE.toFixed();
+					  /// count download
+    				gtag('event', 'Model_Download', {
+						'event_category' : 'Adult_Seated',
+						'event_label' : parametervalue
+						});
+				};
+				this.Landmarks = function(){
+					
+					if(!CheckLicense()) return;
+						
+					ASCIILMWriter.save(PCAdata, predAnthNum, predLandmarkNum, 
+							this.FileName + "_" + getDateNow()+ "_landmark.csv");
+							
+					gtag('event', 'Landmarks_Download', {
+						'event_category' : 'Adult_Seated'
+						});
+				};//
+				this.BodyDimensions = function(){
+
+					if(!CheckLicense()) return;
+					ASCIIAnthroWriter.save(PCAdata, predAnthNum, predLandmarkNum, 
+							this.FileName + "_" + getDateNow() + "_anthro.csv");
+							
+					gtag('event', 'Anthro_Download', {
+						'event_category' : 'Adult_Seated'
+						});
+				};
+				this.RandomModel = function()
+				{
+					if(Math.random()>0.5) this.STUDY = 1;
+					else this.STUDY = -1;
+					
+					if(Math.random()>0.5) this.GENDER = 1;
+					else this.GENDER = -1;
+					
+					this.STATURE = Math.random() * 408 + 1557;
+					this.BMI = Math.random() * 22 + 17;
+					this.AGE = Math.random() * 75 + 20;
+					this.SHS = 0.52;
+				};
+			}
+			
+			var gui = new dat.GUI();
+			gui.width = 350;
+			gui.add(anth, 'STUDY', { US: 1, JAPAN: -1} ).onChange( function(){
+                        animate();
+                        }).name("Study Population").listen();
+						
+			gui.add(anth, 'GENDER', { MALE: 1, FEMALE: -1} ).name("Sex").onChange( function(){
+                        animate();
+                        }).listen();
+			gui.add(anth, 'STATURE',1450,1900).name("Stature (mm)");
+			gui.add(anth, 'BMI',18,40).name("Body Mass Index (kg/m"+"2".sup()+")");
+			gui.add(anth, 'SHS', 0.4,0.6).name(" Sitting Height / Stature");
+			gui.add(anth, 'AGE', 20,90).name("Age (year old)");
+			
+			gui.add(anth, 'LandmarkView').name("View Landmarks").onChange(onLmViewChange);
+			gui.add(anth, 'RandomModel').name("Generate Random Model");
+			
+			var folder2 = gui.addFolder('File Export');
+			folder2.add(anth, 'FileName').name("Input File Name");
+			folder2.add(anth, 'FileType', [ 'obj', 'stl'] );
+			folder2.add(anth, 'ExportGeometry').name("Export Body Shape Model");
+			folder2.add(anth, 'Landmarks').name("Export Landmarks");
+			folder2.add(anth, 'BodyDimensions').name("Export Body Dimentions");
+
+
+			var folder3 = gui.addFolder('Visualization Option');
+			var palette = new function() {
+				this.bgColor = [ 255, 255, 255 ];
+				this.modelColor =[ 255, 255, 255 ];
+				this.showwireframe= false;
+				this.reset = function(){
+					plane.visible = true;
+					renderer.setClearColor( scene.fog.color, 1 );
+					material.color.r = 1;
+					material.color.g = 1;
+					material.color.b = 1;
+				};
+			};
+			folder3.addColor(palette, 'bgColor').name("Set Background Color")
+				.onChange(function(e)
+				{
+					plane.visible = false;
+					var bgcolor = new THREE.Color( 0x66aacc ) ;
+					bgcolor.r = e[0]/255.0;
+					bgcolor.g = e[1]/255.0;
+					bgcolor.b = e[2]/255.0;
+					renderer.setClearColor( bgcolor, 0);
+				});
+				
+			folder3.addColor(palette, 'modelColor').name("Set Model Color")
+				.onChange(function(e)
+				{
+					material.color.r = e[0]/255.0;
+					material.color.g = e[1]/255.0;
+					material.color.b = e[2]/255.0;
+				});
+			folder3.add(palette, 'showwireframe').name("Wireframe View On/Off")
+			.onChange(function()
+			{
+				material.wireframe = palette.showwireframe;
+			});
+			folder3.add(palette, 'reset').name("Reset Visual Option");
+			
+
+			// Adjust width of DAT GUI
+			for(var i=0; i<gui.__controllers.length; i++)
+			{
+				gui.__controllers[i].domElement.style = "width:170px";
+			}
+			
+			for(var i=0; i<8; i++)
+			{
+				gui.__ul.children[i].children[0].children[0].style = "width:160px; text-align: left";
+			}
+			
+		 	// we wait until the PCA data is loaded before redering
+			$(document).ready(function()  {
+				jQuery.get('model/Anth2Data.csv', function(data) {
+					init(CSVToArray(data));
+					animate();
+				});
+			});
+			
+			
+			var ASCIIStlWriter = (function () {
+				var that = {};
+				
+				var stringifyVector = function(vec){
+				  return ""+vec.x+" "+vec.y+" "+vec.z;
+				}
+				
+				var stringifyVertex = function(vec){
+				  return "      vertex "+vec.x+" "+vec.y+" "+vec.z+" \n";
+				}
+ 
+				// Given a THREE.Geometry, create an STL string
+				var generateSTL = function (geometry){
+				  var vertices = geometry.vertices;
+				  var tris     = geometry.faces;
+ 					
+ 					// Read version info
+ 					var xmlhttp;
+					if (window.XMLHttpRequest)
+					  {// code for IE7+, Firefox, Chrome, Opera, Safari
+					  xmlhttp=new XMLHttpRequest();
+					  }
+					else
+					  {// code for IE6, IE5
+					  xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+					  }
+					xmlhttp.open("GET","versioninfo.txt",false);
+					xmlhttp.send();
+					var versionInfo =xmlhttp.responseText;
+					
+					
+				  var stl = "solid STL generated by UMTRI. Version:" + versionInfo + "\n";
+				  for(var i = 0; i<tris.length; i++){
+					stl += ("  facet normal "+stringifyVector( tris[i].normal )+" \n");
+					stl += ("    outer loop \n");
+					stl += stringifyVertex( vertices[ tris[i].a ]);
+					stl += stringifyVertex( vertices[ tris[i].b ]);
+					stl += stringifyVertex( vertices[ tris[i].c ]);
+					stl += ("    endloop \n");
+					stl += ("  endfacet \n");
+				  }
+				  stl += ("endsolid");
+ 
+				  return stl
+				}
+ 
+				// Use FileSaver.js 'saveAs' function to save the string
+				var save = function ( geometry, filename ){  
+				  var stlString = generateSTL( geometry );
+  
+				  var blob = new Blob([stlString], {type: 'text/plain'});
+  
+				  saveAs(blob, filename);
+  
+				}
+
+				that.save = save;
+				return that;
+			}());
+			
+			var ASCIILMWriter = (function () {
+				var that = {};
+				
+				var save = function ( PCAdata, numAnth, numLm, filename ){  
+				    
+					// update points					
+					var Anths = [anth.STUDY, anth.GENDER, anth.STATURE, anth.SHS, anth.BMI, anth.AGE, 1];
+										
+					// Number of vertices of the model :18271
+					var csvString = "";
+				
+					for(var i = 0; i<numLm; i++)
+					{
+						var LmName = PCAdata[endline + numAnth + numLm * 3 + i][0];
+					
+						var xcoord = Number(PCAdata[endline + numAnth + i*3 +0][0]) + calcCoords(Anths, PCAdata[numAnth + i*3+0]);
+						var ycoord = Number(PCAdata[endline + numAnth + i*3+1][0]) + calcCoords(Anths, PCAdata[numAnth + i*3+1]);
+						var zcoord = Number(PCAdata[endline + numAnth + i*3+2][0]) + calcCoords(Anths, PCAdata[numAnth + i*3+2]);
+			
+						csvString += (LmName+", "+xcoord.toFixed(1)+","+ycoord.toFixed(1)+","+zcoord.toFixed(1)+"\n");
+					}
+					
+				  var blob = new Blob([csvString], {type: 'text/plain'});
+  
+				  saveAs(blob, filename);
+				}
+				
+				that.save = save;
+				return that;
+				
+			}());
+			
+			var ASCIIAnthroWriter = (function () {
+				var that = {};
+				
+				var save = function ( PCAdata, numAnth, numLm, filename ){  
+				
+					// update points						
+					var Anths = [anth.STUDY, anth.GENDER, anth.STATURE, anth.SHS, anth.BMI, anth.AGE, 1];
+					var anthNames = [
+							'Gender',
+							'AgeAtTesting',
+							'Stature(w/Shoes)',
+							'Stature(w/oShoes)',
+							'Weight (kg)',
+							'BMI (kg/m^2)',
+							'SHS',
+							'ErectSittingHeight',
+							'EyeHeight',
+							'AcromialHeight',
+							'KneeHeight',
+							'TragionToTopOfHead',
+							'HeadLength',
+							'HeadBreadth',
+							'Shoulder-ElbowLength',
+							'Elbow-HandLength',
+							'HipBreadth',
+							'Buttock-KneeLength',
+							'Buttock-PoplitealLength',
+							'BiacromialBreadth',
+							'ShoulderBreadth',
+							'ChestDepth(Scapula)',
+							'ChestDepth(Spine)',
+							'BiASISBreadth',
+							'ChestCircumference',
+							'WaistCircumference',
+							'HipCircumference',
+							'UpperThighCircumference'
+						];
+								
+					
+					// Number of vertices of the model :18271
+					var csvString = "";
+				
+					for(var i = 0; i<numAnth; i++){
+						var anthName = anthNames[i];
+					
+						var anthPred = Number(PCAdata[endline + i][0]) + calcCoords(Anths, PCAdata[i]);
+																																												
+							csvString += (anthName+","+anthPred.toFixed(2)+"\n");
+					}
+					
+				  var blob = new Blob([csvString], {type: 'text/plain'});
+
+				  saveAs(blob, filename);
+				}
+				
+				that.save = save;
+				return that;
+				
+			}());
+			
+			function init(data) {
+				
+				// save the PCA data as a global variable
+
+			    PCAdata = data;
+
+
+			    // model position in the scene
+				var centerHeight = -0.1;
+				
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 0.1, 15 );
+				camera.position.set( -3, 1.5, 1.0 );
+				
+				cameraTarget = new THREE.Vector3( 0, 0, 0 );
+
+				scene = new THREE.Scene();
+				scene.fog = new THREE.Fog( 0x111111, 2, 15 );
+				
+				//Mouse tooltip//
+				cameraOrtho = new THREE.OrthographicCamera(window.innerWidth / -2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / -2, 1, 1000 );
+				cameraOrtho.position.z = 10;
+				sceneOrtho = new THREE.Scene();
+				//Mouse tooltip//
+
+				// Ground
+
+				plane = new THREE.Mesh(
+					new THREE.PlaneBufferGeometry( 40, 40 ),
+					new THREE.MeshPhongMaterial( { ambient: 0x7799cc, color: 0x66aacc, specular: 0xdddddd } )
+				);
+				plane.rotation.x = -Math.PI/2;
+				plane.position.y = -1.2;
+				scene.add( plane );
+
+				plane.receiveShadow = true;
+
+				// PLY file
+				var loader = new THREE.PLYLoader();
+				loader.addEventListener( 'load', function ( event ) {
+
+					geometry = event.content;
+					
+					// save the vertices data into isolated variable  
+					if(!geometryZero){
+						geometryZero = new Array(0);
+						for(j=0; j<geometry.vertices.length; j++){
+							geometryZero.push(new THREE.Vector3(geometry.vertices[j].x,geometry.vertices[j].y,geometry.vertices[j].z));
+						}
+					}
+
+					//Mouse tooltip messagebox init
+					// create a canvas element
+					canvas1 = document.createElement('canvas');
+					context1 = canvas1.getContext('2d');
+					context1.font = "Bold 20px Arial";
+					context1.fillStyle = "rgba(0,0,0,0.95)";
+					context1.fillText('Hello, world!', 0, 20);
+					
+					// canvas contents will be used for a texture
+					texture1 = new THREE.Texture(canvas1) 
+					texture1.needsUpdate = true;
+
+					var spriteMaterial = new THREE.SpriteMaterial( { map: texture1} );
+
+					sprite1 = new THREE.Sprite( spriteMaterial );
+					sprite1.scale.set(200,200,1);
+					sprite1.visible = false;
+					sceneOrtho.add( sprite1 );
+					//Mouse tooltip messagebox init
+					
+					var Anths = [anth.STUDY, anth.GENDER, anth.STATURE, anth.SHS, anth.BMI, anth.AGE, 1];
+					 
+					var skipNum = predAnthNum + predLandmarkNum * 3;
+					for(i = 0; i < geometry.vertices.length; i++) 
+					{
+						var diffx = calcCoords(Anths, PCAdata[skipNum + i*3+0]);
+						var diffy = calcCoords(Anths, PCAdata[skipNum + i*3+1]);
+						var diffz = calcCoords(Anths, PCAdata[skipNum + i*3+2]);
+				
+						geometry.vertices[i].x = geometryZero[i].x + diffx;
+						geometry.vertices[i].y = geometryZero[i].y + diffy;
+						geometry.vertices[i].z = geometryZero[i].z + diffz;
+					}
+					
+					geometry.verticesNeedUpdate = true;
+					
+					geometry.mergeVertices();
+					geometry.computeFaceNormals();
+					geometry.computeVertexNormals();
+					
+					
+					material = 
+						new THREE.MeshLambertMaterial({ 
+						color: 0xffffff, 
+						specular: 0xaaaaaa, 
+						shininess: 20, 
+						shading: THREE.SmoothShading
+						
+						
+					} );
+					mesh = new THREE.Mesh( geometry, material );
+				
+					mesh.position.set( 0, centerHeight, 0);
+					mesh.rotation.set( - Math.PI / 2, 0, 0 );
+					mesh.scale.set( 0.001, 0.001, 0.001 );
+
+					mesh.castShadow = true;
+					mesh.receiveShadow = true;
+					
+					
+					scene.add( mesh );
+										
+					// Landmarks
+					lmGeometry = new THREE.Geometry();
+					lmMaterial = new THREE.PointCloudMaterial({
+											// Mouse tooltip
+											vertexColors: true,
+											// Mouse tooltip
+											size: 5,
+											sizeAttenuation: false
+										});
+										
+					for(i = 0; i < predLandmarkNum; i++) 
+					{
+						var xcoord = Number(PCAdata[endline + predAnthNum + i*3+0][0]) + calcCoords(Anths, PCAdata[predAnthNum + i*3+0]);
+						var ycoord = Number(PCAdata[endline + predAnthNum + i*3+1][0]) + calcCoords(Anths, PCAdata[predAnthNum + i*3+1]);
+						var zcoord = Number(PCAdata[endline + predAnthNum + i*3+2][0]) + calcCoords(Anths, PCAdata[predAnthNum + i*3+2]);
+			
+						lmGeometry.vertices.push(new THREE.Vector3(xcoord,ycoord,zcoord));
+						//Mouse tooltip
+						lmGeometry.colors.push(new THREE.Color( 0xdd0000 ));
+						//Mouse tooltip
+					}
+
+					// Mouse tooltip
+					//jQuery.get('landmarks_nameToReadable_mapping.csv', function(data) {
+					//	pointNameMapping = CSVToArray(data);
+					//});
+					// Mouse tooltip
+					
+					pointCloud = new THREE.PointCloud(lmGeometry, lmMaterial);
+					pointCloud.position.set( 0, centerHeight, 0);
+					pointCloud.rotation.set(- Math.PI / 2, 0, 0 );
+					pointCloud.scale.set( 0.001, 0.001, 0.001 );
+					
+					scene.add(pointCloud);
+					
+					//skeleton
+					skelIds = [[84,90],[90,91],[91,92],
+								[92,93],[93,103],[103,105],
+								[92,94],[94,104],[104,106],
+								[90,97],[97,99],[99,101],
+								[90,98],[98,100],[100,102]];
+					
+					skmaterial = new THREE.LineBasicMaterial({color: 0xffffff, linewidth: 2});
+					
+					skgeometry = new THREE.Geometry();
+					
+					for(i=0; i<skelIds.length; i++)
+					{
+						skgeometry.vertices.push(
+							lmGeometry.vertices[skelIds[i][0]]
+						);
+						skgeometry.vertices.push(
+							lmGeometry.vertices[skelIds[i][1]]
+						);
+					}
+					
+					skeleton = new THREE.Line( skgeometry, skmaterial, THREE.LinePieces);
+					skeleton.position.set( 0, centerHeight, 0);
+					skeleton.rotation.set( - Math.PI / 2, 0, 0 );
+					skeleton.scale.set( 0.001, 0.001, 0.001 );
+					scene.add( skeleton );
+					
+					skeleton.visible = anth.LandmarkView;
+					pointCloud.visible = anth.LandmarkView;
+					material.needsUpdate = true;
+					
+					
+ 					document.getElementById('text').style.display = "none";
+					
+					
+				} );
+				
+				loader.load( 'model/mean_model_tri.ply' );
+				
+				light1 = new THREE.DirectionalLight( 0xaaaaaa, 0.5);
+				light1.position.set( -0.5, 1, 0.5 );
+				scene.add( light1 );
+				
+				light2 = new THREE.DirectionalLight( 0xffffff );
+				light2.position.set( -1, 1, 0 )
+				scene.add( light2 );
+
+				// renderer
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				renderer.setClearColor( scene.fog.color, 1 );
+
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+
+				renderer.shadowMapEnabled = true;
+				renderer.shadowMapCullFace = THREE.CullFaceBack;
+				
+				// Mouse tooltip
+				renderer.autoClear = false;
+				// Mouse tooltip
+
+				container.appendChild( renderer.domElement );
+				
+				// mouse control
+				controls = new THREE.OrbitControls(camera, renderer.domElement );
+				controls.minDistance = 0;
+				controls.maxDistance = 3;
+				controls.center[1] = 1;
+				
+
+				// resize
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				// Mouse tooltip init
+				raycaster = new THREE.Raycaster();
+				mouse = new THREE.Vector2();
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				// Mouse tooltip init
+			}
+			// Mouse tooltip onDocumentMouseMove
+			function onDocumentMouseMove( event ) {
+				if (anth.LandmarkView) 
+				{
+					event.preventDefault();
+
+					// Mouse tooltip render function call
+					render();
+					// Mouse tooltip render function call
+
+					mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+					mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+					mouseWindow = new THREE.Vector2(event.clientX - window.innerWidth * 0.435, - event.clientY + window.innerHeight * 0.44);
+				}
+				
+			}
+			// Mouse tooltip onDocumentMouseMove
+
+			function onLmViewChange()
+			{
+				skeleton.visible = anth.LandmarkView;
+				pointCloud.visible = anth.LandmarkView;
+				if(anth.LandmarkView) 
+				{
+					mesh.material.opacity = 0.5;
+					mesh.material.transparent = true;
+				}
+				else
+				{
+					mesh.material.opacity = 1;
+					mesh.material.transparent = false;
+				}
+			}
+			
+			function setShadowedLight( directionalLight ) {
+
+				directionalLight.castShadow = true;
+				// directionalLight.shadowCameraVisible = true;
+
+				var d = 3;
+				directionalLight.shadowCameraLeft = -d;
+				directionalLight.shadowCameraRight = d;
+				directionalLight.shadowCameraTop = d;
+				directionalLight.shadowCameraBottom = -d;
+
+				directionalLight.shadowCameraNear = 0;
+				directionalLight.shadowCameraFar = 6;
+
+				directionalLight.shadowMapWidth = 4096;
+				directionalLight.shadowMapHeight = 4096;
+
+				directionalLight.shadowBias = -0.001;
+				directionalLight.shadowDarkness = 0.2;
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				// Mouse tooltip
+				cameraOrtho.left = - window.innerWidth / 2;
+				cameraOrtho.right = window.innerWidth / 2;
+				cameraOrtho.top = window.innerHeight / 2;
+				cameraOrtho.bottom = - window.innerHeight / 2;
+				cameraOrtho.updateProjectionMatrix();
+				// Mouse tooltip
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				
+				
+				controls.update();
+				
+				light1.position.x = -1.45*camera.position.z;
+				light1.position.z = 1.75 * camera.position.x;
+				
+				light2.position.x = camera.position.x;
+				light2.position.z = camera.position.z;
+				
+				// Apply PCA data to the vertices to morph
+				if(oldStt != anth.STATURE || oldBMI != anth.BMI 
+					|| oldGen != anth.GENDER|| oldAge != anth.AGE
+					|| oldSHS != anth.SHS || oldStd != anth.STUDY)
+				{
+					
+					
+				    // prevent input over the range
+					// if(anth.GENDER ==1)
+                    // 					{
+                    // 						if(anth.STATURE > 1750) anth.STATURE = 1750;
+                    // 						if(anth.STATURE < 1500) anth.STATURE = 1500;
+                    // 					}
+                    // 					if(anth.GENDER == -1)
+                    // 					{
+                    // 						if(anth.STATURE > 1900) anth.STATURE = 1900;
+                    // 						if(anth.STATURE < 1650) anth.STATURE = 1650;
+                    // 					}
+                    //					  if(anth.BMI > 40) anth.BMI = 40;
+                    // 					if(anth.BMI < 18) anth.BMI = 18;
+                    // 					if(anth.AGE > 90) anth.AGE = 90;
+                    // 					if(anth.AGE < 20) anth.AGE = 20;
+                    // 					
+                    // 					
+                    // 					if(anth.GENDER == 1) //for female
+                    // 					{
+                    // 						gui.__controllers[1].__min = 1500;
+                    // 						gui.__controllers[1].__max = 1750;
+                    // 					}
+                    // 					else
+                    // 					{
+                    // 						gui.__controllers[1].__min = 1650;
+                    // 						gui.__controllers[1].__max = 1900;
+                    // 					}
+                    // 					
+					gui.__controllers[1].updateDisplay();
+				
+					oldStt = anth.STATURE;
+					oldBMI = anth.BMI;
+					oldAge = anth.AGE;
+					oldGen = anth.GENDER;
+					oldSHS = anth.SHS;
+					oldStd = anth.STUDY;
+					
+					
+					var Anths = [anth.STUDY, anth.GENDER, anth.STATURE, anth.SHS, anth.BMI, anth.AGE, 1];
+										
+					var skipNum = predAnthNum + predLandmarkNum * 3;
+					for(i = 0; i < geometry.vertices.length; i++) 
+					{
+						var diffx = calcCoords(Anths, PCAdata[skipNum + i*3+0]);
+						var diffy = calcCoords(Anths, PCAdata[skipNum + i*3+1]);
+						var diffz = calcCoords(Anths, PCAdata[skipNum + i*3+2]);
+				
+						geometry.vertices[i].x = geometryZero[i].x + diffx;
+						geometry.vertices[i].y = geometryZero[i].y + diffy;
+						geometry.vertices[i].z = geometryZero[i].z + diffz;
+					}
+					
+					geometry.computeFaceNormals();
+										
+					geometry.computeVertexNormals();
+					
+					geometry.verticesNeedUpdate = true;
+					geometry.normalsNeedUpdate = true;
+					
+					// landmark update
+					for(i = 0; i < predLandmarkNum; i++) 
+					{
+						var xcoord = Number(PCAdata[endline + predAnthNum + i*3+0][0]) + calcCoords(Anths, PCAdata[predAnthNum + i*3+0]);
+						var ycoord = Number(PCAdata[endline + predAnthNum + i*3+1][0]) + calcCoords(Anths, PCAdata[predAnthNum + i*3+1]);
+						var zcoord = Number(PCAdata[endline + predAnthNum + i*3+2][0]) + calcCoords(Anths, PCAdata[predAnthNum + i*3+2]);
+			
+						lmGeometry.vertices[i] = new THREE.Vector3(xcoord,ycoord,zcoord);
+					}
+					lmGeometry.verticesNeedUpdate = true;
+					
+					// skeleton update
+					for(i=0; i<skelIds.length; i++)
+					{
+						skgeometry.vertices[i*2+0] = 
+							lmGeometry.vertices[skelIds[i][0]];
+						skgeometry.vertices[i*2+1] = 
+							lmGeometry.vertices[skelIds[i][1]];
+					}
+					skgeometry.verticesNeedUpdate = true;
+					
+				}
+				
+				// Mouse tooltip
+				renderer.clear();
+				renderer.render( scene, camera );
+				renderer.clearDepth();
+				renderer.render( sceneOrtho, cameraOrtho );
+				// Mouse tooltip
+
+			}
+						
+			function calcCoords(diffAnths, onePCAdata) {
+			
+				var diffCoords = 0.0;
+				
+				for(k = 0; k<diffAnths.length; k++)
+				{
+					diffCoords += onePCAdata[k]*diffAnths[k];
+				}
+				
+				return( diffCoords );
+			}
+
+
+			// from http://stackoverflow.com/questions/1293147/javascript-code-to-parse-csv-data
+			function CSVToArray( strData, strDelimiter ){
+				// Check to see if the delimiter is defined. If not,
+				// then default to comma.
+				strDelimiter = (strDelimiter || ",");
+
+				// Create a regular expression to parse the CSV values.
+				var objPattern = new RegExp(
+						(
+							// Delimiters.
+								"(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+
+									// Quoted fields.
+										"(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+
+									// Standard fields.
+										"([^\"\\" + strDelimiter + "\\r\\n]*))"
+								),
+						"gi"
+				);
+
+
+				// Create an array to hold our data. Give the array
+				// a default empty first row.
+				var arrData = [[]];
+
+				// Create an array to hold our individual pattern
+				// matching groups.
+				var arrMatches = null;
+
+
+				// Keep looping over the regular expression matches
+				// until we can no longer find a match.
+				while (arrMatches = objPattern.exec( strData )){
+
+					// Get the delimiter that was found.
+					var strMatchedDelimiter = arrMatches[ 1 ];
+
+					// Check to see if the given delimiter has a length
+					// (is not the start of string) and if it matches
+					// field delimiter. If id does not, then we know
+					// that this delimiter is a row delimiter.
+					if (
+							strMatchedDelimiter.length &&
+									(strMatchedDelimiter != strDelimiter)
+							){
+
+						// Since we have reached a new row of data,
+						// add an empty row to our data array.
+						arrData.push( [] );
+
+					}
+
+
+					// Now that we have our delimiter out of the way,
+					// let's check to see which kind of value we
+					// captured (quoted or unquoted).
+					if (arrMatches[ 2 ]){
+
+						// We found a quoted value. When we capture
+						// this value, unescape any double quotes.
+						var strMatchedValue = arrMatches[ 2 ].replace(
+								new RegExp( "\"\"", "g" ),
+								"\""
+						);
+
+					} else {
+
+						// We found a non-quoted value.
+						var strMatchedValue = arrMatches[ 3 ];
+
+					}
+
+
+					// Now that we have our value string, let's add
+					// it to the data array.
+					arrData[ arrData.length - 1 ].push( strMatchedValue );
+				}
+
+				// Return the parsed data.
+				return( arrData );
+			}
+			
+		</script>
+	</body>
+</html>

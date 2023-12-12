@@ -12,17 +12,27 @@ if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 var container;
 var camera, cameraTarget, scene, renderer, controls;
 var light1, light2;
-var mesh, geometry, geometryZero, material;
-var PCAdata; 
-var plane;
+
+
+var material;
+var PCAdata;
+var plyMesh;
+var plyGeometry ;
+var geometryZero = [];
+// human ANTH data
 var oldStd, oldSHS, oldStt, oldBMI, oldGen, oldAge;
+
+var objPCAdata; 
+var objMesh;
+var objGeometry;
+var objGeometryZero = [];
+// wheelchair ANTH data
+var oldWidth, oldSEATWIDTH, oldBackHeight, oldSEATHEIGHT;
+
+var plane;
 var isLicenseAgreed = false;
 var license ='<div class="myBox" style="text-align: left;"><p><strong>End-User License Agreement</strong></p><p>University of Michigan Office of Technology Transfer File: 2019-247</p><p>IMPORTANT &ndash; READ CAREFULLY: This Agreement is a legal agreement between &ldquo;LICENSEE&rdquo; (defined below) and The Regents of The University of Michigan, a constitutional corporation of the state of Michigan (&ldquo;MICHIGAN&rdquo;).</p><p>BACKGROUND</p><ol><li>Faculty at the University of Michigan have developed a proprietary application and related documentation, referred to as &ldquo;Online Body Shape Models&rdquo;, and further described in MICHIGAN Office of Technology File 2019-247 (hereinafter referred to as "MODEL"); and</li><li>LICENSEE desires to obtain, and MICHIGAN, consistent with its mission of education and research, desires to grant, a license to use the MODEL subject to the terms and conditions set forth below; and</li></ol><p>The parties therefore agree as follows:</p><ol><li>&nbsp;&nbsp; LICENSE</li><li>The term &ldquo;LICENSEE&rdquo; shall mean the person downloading the MODEL solely for personal use by that person on the personal equipment of that person</li><li>Subject to the terms and conditions of this Agreement, MICHIGAN hereby grants to LICENSEE a non-exclusive, non-transferable right to copy, download and use the MODEL solely by LICENSEE for academic, research, and non-commercial purposes.</li><li>LIMITATION OF LICENSE AND RESTRICTIONS</li><li>LICENSEE shall not translate, reverse engineer, decompile, disassemble, modify, create derivative works of or publicly display the MODEL, in whole or in part, unless expressly authorized by this Agreement.</li><li>LICENSEE agrees that it shall use the MODEL only for LICENSEE\'S sole and exclusive use, and shall not disclose, sell, license, or otherwise distribute the MODEL to any third party without the prior written consent of MICHIGAN. LICENSEE shall not assign this Agreement, and any attempt by LICENSEE to assign it shall be void from the beginning. LICENSEE agrees to secure and protect the MODEL and any copies in a manner consistent with the maintenance of MICHIGAN\'S rights in the MODEL and to take appropriate action by instruction or agreement with its employees who are permitted access to the MODEL in order to satisfy LICENSEE\'S obligations under this Agreement.</li><li>LICENSEE agrees that it shall include copyright notice &ldquo;Copyright 2018 The Regents of The University of Michigan &ndash; Biosciences Group UMTRI&rdquo; in all results, publications, presentations or other public displays of results which utilize the MODEL in whole or part.</li></ol><p>III. TITLE AND OWNERSHIP</p><ol><li>No ownership rights of MICHIGAN in the MODEL are conferred upon LICENSEE by this Agreement.</li><li>LICENSEE acknowledges MICHIGAN\'S proprietary rights in the MODEL and agrees to reproduce all copyright notices supplied by MICHIGAN on all copies of the MODEL, and on all MODEL outputs and copies of MODEL outputs.</li><li>DISCLAIMER OF WARRANTY AND LIMITATION OF LIABILITY</li><li>THE<strong> MODEL</strong> IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. <strong>MICHIGAN</strong> DOES NOT WARRANT THAT THE FUNCTIONS CONTAINED IN THE <strong>MODEL</strong> WILL MEET <strong>LICENSEE\'S </strong>REQUIREMENTS OR THAT OPERATION WILL BE UNINTERRUPTED OR ERROR FREE. MICHIGAN shall not be liable for special, indirect, incidental, or consequential damages with respect to any claim on account of or arising from this Agreement or use of the MODEL, even if MICHIGAN has been or is hereafter advised of the possibility of such damages. Because some states do not allow certain exclusions or limitations on implied warranties or of liability for consequential or incidental damages, the above exclusions may not apply to LICENSEE. In no event, however, will MICHIGAN be liable to LICENSEE, under any theory of recovery, in an amount in excess of the license fee paid by LICENSEE under this Agreement.</li><li>LICENSEE agrees that MICHIGAN has no obligation to provide to LICENSEE any maintenance, support, or update services. Should MICHIGAN provide any revised versions of the MODEL to LICENSEE, LICENSEE agrees that this license agreement shall apply to such revised versions.</li><li>The MODEL does not provide medical advice and is not intended as a sole means for patient diagnosis.&nbsp; It is not a substitute for professional medical advice, diagnosis or treatment.&nbsp; The MODEL is intended for informational purposes only.&nbsp; MICHIGAN does not warrant or guarantee the accuracy or completeness of the information in the MODEL and specifically disclaims any liability therefore.</li><li>WARRANTY OF LICENSEE</li></ol><p>LICENSEE warrants and represents that it will carefully review any documentation or instructional material provided by MICHIGAN.</p><ol><li>TERMINATION</li></ol><p>If LICENSEE at any time fails to abide by the terms of this Agreement, MICHIGAN shall have the right to immediately terminate the license granted herein, require the return or destruction of all copies of the MODEL from LICENSEE and certification in writing as to such return or destruction, and pursue any other legal or equitable remedies available.</p><p>VII. MISCELLANEOUS</p><ol><li>This Agreement shall be construed in accordance with the laws of the state of Michigan. Should LICENSEE for any reason bring a claim, demand, or other action against MICHIGAN, its agents or employees, arising out of this Agreement or the MODEL licensed herein, LICENSEE agrees to bring said claim only in the Michigan Court of Claims.</li><li>THIS AGREEMENT REPRESENTS THE COMPLETE AND EXCLUSIVE STATEMENT OF THE AGREEMENT BETWEEN<strong>MICHIGAN</strong> AND <strong>LICENSEE </strong>AND SUPERSEDES ALL PRIOR AGREEMENTS, PROPOSALS, REPRESENTATIONS AND OTHER COMMUNICATIONS, VERBAL OR WRITTEN, BETWEEN THEM WITH RESPECT TO USE OF THE<strong>MODEL</strong>. THIS AGREEMENT MAY BE MODIFIED ONLY WITH THE MUTUAL WRITTEN APPROVAL OF AUTHORIZED REPRESENTATIVES OF THE PARTIES.</li><li>The terms and conditions of this Agreement shall prevail notwithstanding any different, conflicting, or additional terms or conditions which may appear in any purchase order or other document submitted by LICENSEE. LICENSEE agrees that such additional or inconsistent terms are deemed rejected by MICHIGAN.</li><li>Unless otherwise exempt therefrom, LICENSEE agrees that it will be responsible for any sales, use or excise taxes imposed by any governmental unit in this transaction except income taxes.</li><li>LICENSEE acknowledges that the MODEL is of United States origin. LICENSEE agrees to comply with all applicable international and national laws that apply to the MODEL, including the United States Export Administration Regulations, as well as end-user, end-use, and destination restrictions issued by the United States.</li><li>All copies of the MODEL distributed by LICENSEE shall contain copyright notice in appropriate locations and forms.&nbsp; Such notices shall be consistent with any instructions which might be provided by MICHIGAN; and shall include all copyright and other notices in the form supplied by MICHIGAN</li><li>MICHIGAN and LICENSEE agree that any xerographically or electronically reproduced copy of this fully-executed agreement shall have the same legal force and effect as any copy bearing original signatures of the parties.</li></ol><p>&nbsp;</p></div>'
-			
-var plyMesh;
-var objMesh;
-var plyGeometry;
-var objGeometry;
+		
 
 var predAnthNum = 28;
 var predLandmarkNum = 119;
@@ -47,6 +57,12 @@ var anth = new function() {
     this.LandmarkView = false;
     this.FileType = 'obj';
     this.FileName = 'BioHuman';
+
+    this.ARMLEN = 984.8299560546875; // Initial value
+    this.BACKHEIGHT = 720; // Initial value
+    this.SEATWIDTH = 1147.6681823730469; // Initial value
+    this.SEATHEIGHT = 719.204719543457; // Initial value
+
     this.ExportGeometry = function() {
         if (!CheckLicense()) return;
 
@@ -235,6 +251,13 @@ folder3.add(palette, 'showwireframe').name("Wireframe View On/Off")
 folder3.add(palette, 'reset').name("Reset Visual Option");
 
 
+gui.add(anth, 'ARMLEN', 800, 1200).name("Arm Length (mm)");
+// gui.add(anth, 'BACKHEIGHT', 500, 1000).name("BackBar Height (mm)");
+gui.add(anth, 'SEATWIDTH', 900, 1400).name("Seat Width (mm)");
+gui.add(anth, 'SEATHEIGHT', 600, 1100).name("Seat Height (mm)");
+
+
+
 // Adjust width of DAT GUI
 for(var i=0; i<gui.__controllers.length; i++)
 {
@@ -380,7 +403,11 @@ var save = function ( PCAdata, numAnth, numLm, filename ){
         'ChestCircumference',
         'WaistCircumference',
         'HipCircumference',
-        'UpperThighCircumference'
+        'UpperThighCircumference',
+        'ARMLEN',
+        'BACKHEIGHT',
+        'SEATWIDTH',
+        'SEATHEIGHT',
     ];
         
     
@@ -481,6 +508,7 @@ function CSVToArray( strData, strDelimiter ){
     return( arrData );
 }
 
+
 function calcCoords(diffAnths, onePCAdata) {
     var diffCoords = 0.0;
 
@@ -490,7 +518,6 @@ function calcCoords(diffAnths, onePCAdata) {
 
     return diffCoords;
 }
-
 
 // load the HUMAN model
 function loadPLYFile(PLYposx,PLYposy,PLYposz) {
@@ -505,7 +532,7 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
         if (geometry.isBufferGeometry) {
             // Process BufferGeometry
             var positions = geometry.attributes.position;
-            var geometryZero = [];
+            // var geometryZero = [];
             for (let i = 0; i < positions.count; i++) {
                 var x = positions.getX(i);
                 var y = positions.getY(i);
@@ -551,12 +578,11 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
         // Create the new mesh and assign it to plyMesh
         plyMesh = new THREE.Mesh(geometry, material);
         plyMesh.rotation.set(-60 * (Math.PI / 180), 0, 90 * (Math.PI / 180));
+   
         plyMesh.position.set(PLYposx, PLYposy, PLYposz);
         plyMesh.scale.set(0.0011, 0.0011, 0.0011);
         plyMesh.castShadow = true;
         plyMesh.receiveShadow = true;
-
-
         // Add the new mesh to the scene
         scene.add(plyMesh);
 
@@ -564,55 +590,122 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
     });
 }
 
-// Function to remove the previous OBJ mesh from the scene
-function removeObjMesh() {
-    if (objMesh) {
-        scene.remove(objMesh);
-        if (objMesh.geometry) objMesh.geometry.dispose();
-        if (Array.isArray(objMesh.material)) {
-            objMesh.material.forEach(material => material.dispose());
-        } else if (objMesh.material) {
-            objMesh.material.dispose();
-        }
-        objMesh = undefined;
-    }
-}
-
 // Function to load and add the new OBJ mesh to the scene, a wheelchair
 function loadAndAddOBJ(posx, posy, posz) {
     const loader = new OBJLoader();
     loader.load('_changes.obj', function (object) {
-        object.scale.set(0.001, 0.001, 0.001);
+        // Process OBJ object and create geometry
+        var geometry = new THREE.BufferGeometry();
 
-        const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        var minX = Infinity;
+        var minY = Infinity;
+        var minZ = Infinity;
+
+        var maxX = -Infinity;
+        var maxY = -Infinity;
+        var maxZ = -Infinity;
 
         object.traverse(function (child) {
             if (child instanceof THREE.Mesh) {
-                child.material = material;
-                child.material.emissive = new THREE.Color(0x333333); // Soft glow
-                child.material.emissiveIntensity = 0.5; // Adjust intensity as needed
+                objGeometry = child.geometry;
+                geometry = objGeometry;
 
-                if (!child.geometry.attributes.normal) {
-                    child.geometry.computeVertexNormals();
-                }
+                var positions = geometry.attributes.position;
+                for (let i = 0; i < positions.count; i++) {
+                    var x = positions.getX(i);
+                    var y = positions.getY(i);
+                    var z = positions.getZ(i);
 
-                // Set objGeometry for the first mesh found
-                if (!objGeometry) {
-                    objGeometry = child.geometry;
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    minZ = Math.min(minZ, z);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                    maxZ = Math.max(maxZ, z);
                 }
             }
         });
 
-        object.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
-        object.position.set(posx - 0.3, posy - 0.7, posz);
+        // console.log(minX-maxX, minY-maxY, minZ-maxZ);
 
-        removeObjMesh();
-        objMesh = object;
+        // Create material for OBJ mesh
+        var material = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            specular: 0xaaaaaa,
+            shininess: 20,
+            shading: THREE.SmoothShading
+        });
+
+        // Remove the previous OBJ mesh if it exists
+        if (objMesh) {
+            scene.remove(objMesh);
+        }
+        // Ensure geometry normals are correct
+        if (!geometry.attributes.normal) {
+            geometry.computeVertexNormals();
+        }
+        
+        objMesh = new THREE.Mesh(geometry, material);
+        
+
+        // Calculate the center of the bounding box before scaling
+        var boundingBox = new THREE.Box3().setFromObject(objMesh);
+        var center = new THREE.Vector3();
+        boundingBox.getCenter(center);
+
+        // Calculate the size of the bounding box before scaling
+        var Anths = [anth.SEATWIDTH, anth.SEATHEIGHT, anth.ARMLEN];
+        var sizeX = Math.abs(maxX - minX);
+        var sizeY = Math.abs(maxY - minY);
+        var sizeZ = Math.abs(maxZ - minZ);
+
+        // Calculate the scaling factors
+        var scaleX = Anths[0] / sizeX;
+        var scaleY = Anths[1] / sizeY;
+        var scaleZ = Anths[2] / sizeZ;
+
+        // Apply the scaling factors
+        geometry.scale(scaleZ, scaleX, scaleY);
+
+
+        // Calculate the center of the bounding box before scaling
+        var boundingBoxAfter = new THREE.Box3().setFromObject(objMesh);
+        var centerAfter = new THREE.Vector3();
+        boundingBoxAfter.getCenter(centerAfter);
+
+
+        // console.log(center, centerAfter);
+        // console.log(scaleX, scaleY, scaleZ);
+
+        // Calculate the translation factors, z is the width, x is the height, y is the length due to rotation of object
+        var transX = 0;
+        var transY = 0;
+        var transZ = 0;
+        if (scaleX != 1){
+            transX = (center.y - centerAfter.y) * 0.001;
+        }
+        else if (scaleY != 1){
+            transY = (center.z - centerAfter.z) * 0.001;
+        }
+        else if (scaleZ != 1){
+            transZ = (center.x - centerAfter.x) * 0.001;
+        }
+
+        // console.log(transX, transY, transZ);
+
+        // Create the new mesh and assign it to objMesh
+        objMesh.scale.set(0.001, 0.001, 0.001);
+        objMesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
+        objMesh.position.set(posx - 0.3 + transX, posy - 0.7 + transY, posz + transZ);
+        // objMesh.position.set(posx - 0.3,  posy - 0.7, posz);
+
+        // Add the new mesh to the scene
         scene.add(objMesh);
-
-        loadPLYFile(posx, posy -0.08, posz+0.03);
     });
 }
+
+
+
 
 
 
@@ -621,6 +714,7 @@ function init(data) {
     
     // save the PCA data as a global variable
     PCAdata = data;
+    
 
     container = document.createElement( 'div' );
     document.body.appendChild( container );
@@ -674,8 +768,11 @@ function init(data) {
     controls.maxDistance = 50;
     // Set the target of the controls to the position of your object
     controls.target.set(camera.position.x, camera.position.y, camera.position.z-1.5);
+
+
     // Load your OBJ file and Plyfile using a library like three.js
     loadAndAddOBJ(controls.target.x, controls.target.y, controls.target.z);
+    loadPLYFile(controls.target.x, controls.target.y -0.08, controls.target.z+0.03);
     // Update controls to apply changes
     controls.update();
 
@@ -742,6 +839,34 @@ function init(data) {
 }
 
 
+
+function updatePLYGeometry(anth, geometry, geometryZero, PCAdata, predAnthNum, predLandmarkNum) {
+
+    var Anths = [anth.STUDY, anth.GENDER, anth.STATURE, anth.SHS, anth.BMI, anth.AGE, 1];
+
+
+    var positions = geometry.attributes.position;
+    var skipNum = predAnthNum + predLandmarkNum * 3;
+
+    for (let i = 0; i < positions.count; i++) {
+        var diffx = calcCoords(Anths, PCAdata[skipNum + i * 3 + 0]);
+        var diffy = calcCoords(Anths, PCAdata[skipNum + i * 3 + 1]);
+        var diffz = calcCoords(Anths, PCAdata[skipNum + i * 3 + 2]);
+
+        positions.setXYZ(
+            i,
+            geometryZero[i].x + diffx,
+            geometryZero[i].y + diffy,
+            geometryZero[i].z + diffz
+        );
+    }
+
+    positions.needsUpdate = true;
+    geometry.computeVertexNormals();
+}
+
+
+
 // animate function
 function animate() {
 
@@ -754,7 +879,6 @@ function animate() {
     light2.position.x = camera.position.x;
     light2.position.z = camera.position.z;
 
-    // Apply PCA data to the vertices to morph
 
     if(oldStt != anth.STATURE || oldBMI != anth.BMI 
         || oldGen != anth.GENDER|| oldAge != anth.AGE
@@ -770,8 +894,26 @@ function animate() {
         oldSHS = anth.SHS;
         oldStd = anth.STUDY;
         
-        // load PLY and obj;
+        // load PLY file;
+        // loadPLYFile(controls.target.x, controls.target.y -0.08, controls.target.z+0.03)
+        updatePLYGeometry(anth, plyGeometry, geometryZero, PCAdata, predAnthNum, predLandmarkNum);
+    }
+
+    if (oldSEATHEIGHT != anth.SEATHEIGHT || 
+        oldWidth != anth.ARMLEN ||
+        oldBackHeight != anth.BACKHEIGHT || 
+        oldSEATWIDTH != anth.SEATWIDTH) {
+    
+        gui.__controllers[1].updateDisplay();
+
+        oldSEATHEIGHT = anth.SEATHEIGHT;
+        oldWidth = anth.ARMLEN;
+        oldBackHeight = anth.BACKHEIGHT;
+        oldSEATWIDTH = anth.SEATWIDTH;
+
         loadAndAddOBJ(controls.target.x, controls.target.y, controls.target.z);
+        // console.log(scaleX, scaleY, scaleZ);
+            
     }
 
     // Mouse tooltip
@@ -785,7 +927,8 @@ function animate() {
 
 
 // we wait until the PCA data is loaded before redering
-$(document).ready(function()  {
+$(document).ready(function() {
+    // Load and process CSV file
     jQuery.get('model/Anth2Data.csv', function(data) {
         init(CSVToArray(data));
         animate();
