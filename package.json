@@ -12,6 +12,8 @@
     "vite": "^4.4.11"
   },
   "dependencies": {
+    "@jscad/io": "^2.4.6",
+    "@jscad/modeling": "^2.12.0",
     "three": "^0.158.0",
     "three-csg": "^1.0.0"
   }

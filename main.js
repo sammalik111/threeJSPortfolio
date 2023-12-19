@@ -4,7 +4,8 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
-
+import { createWheelchair } from './wheelchairModeling.js';
+import CSG2Geom from "./csg-2-geom.js";
 
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -19,15 +20,15 @@ var PCAdata;
 var plyMesh;
 var plyGeometry ;
 var geometryZero = [];
+var plyParameterChanged = false;
 // human ANTH data
 var oldStd, oldSHS, oldStt, oldBMI, oldGen, oldAge;
 
-var objPCAdata; 
+// wheelchair parameters
+var oldSEATWIDTH,oldSEATHEIGHT,oldCAMBER,oldLEGLEN,oldLEGRESTANG,oldFLOORHEIGHT;
 var objMesh;
 var objGeometry;
-var objGeometryZero = [];
-// wheelchair ANTH data
-var oldWidth, oldSEATWIDTH, oldBackHeight, oldSEATHEIGHT;
+let objparameterChanged = false;
 
 var plane;
 var isLicenseAgreed = false;
@@ -58,10 +59,14 @@ var anth = new function() {
     this.FileType = 'obj';
     this.FileName = 'BioHuman';
 
-    this.ARMLEN = 984.8299560546875; // Initial value
-    this.BACKHEIGHT = 720; // Initial value
-    this.SEATWIDTH = 1147.6681823730469; // Initial value
-    this.SEATHEIGHT = 719.204719543457; // Initial value
+    // wheelchair parameters
+    this.FLOORHEIGHT = 21;  // Initial value
+    this.SEATWIDTH = 18;    // Initial value
+    this.SEATHEIGHT = 20;   // Initial value
+    this.CAMBER = 3;        // Initial value
+    this.LEGLEN = 4;        // Initial value
+    this.LEGRESTANG = 75;   // Initial value
+
 
     this.ExportGeometry = function() {
         if (!CheckLicense()) return;
@@ -196,10 +201,20 @@ gui.add(anth, 'STUDY', { US: 1, JAPAN: -1} ).onChange( function(){
 gui.add(anth, 'GENDER', { MALE: 1, FEMALE: -1} ).name("Sex").onChange( function(){
                 animate();
                 }).listen();
-gui.add(anth, 'STATURE',1450,1900).name("Stature (mm)");
-gui.add(anth, 'BMI',18,40).name("Body Mass Index (kg/m"+"2".sup()+")");
-gui.add(anth, 'SHS', 0.4,0.6).name(" Sitting Height / Stature");
-gui.add(anth, 'AGE', 20,90).name("Age (year old)");
+
+gui.add(anth, 'STATURE', 1450, 1900).name("Stature (mm)").onChange(function(value) {
+    plyParameterChanged = true;
+});
+gui.add(anth, 'BMI', 18, 40).name("Body Mass Index (kg/m²)").onChange(function(value) {
+    plyParameterChanged = true;
+});
+gui.add(anth, 'SHS', 0.4, 0.6).name("Sitting Height / Stature").onChange(function(value) {
+    plyParameterChanged = true;
+});
+gui.add(anth, 'AGE', 20, 90).name("Age (year old)").onChange(function(value) {
+    plyParameterChanged = true;
+});
+
 
 gui.add(anth, 'RandomModel').name("Generate Random Model");
 
@@ -251,10 +266,28 @@ folder3.add(palette, 'showwireframe').name("Wireframe View On/Off")
 folder3.add(palette, 'reset').name("Reset Visual Option");
 
 
-gui.add(anth, 'ARMLEN', 800, 1200).name("Arm Length (mm)");
-// gui.add(anth, 'BACKHEIGHT', 500, 1000).name("BackBar Height (mm)");
-gui.add(anth, 'SEATWIDTH', 900, 1400).name("Seat Width (mm)");
-gui.add(anth, 'SEATHEIGHT', 600, 1100).name("Seat Height (mm)");
+// Create a folder named "Wheelchair Parameters"
+var wheelchairFolder = gui.addFolder("Wheelchair Parameters");
+
+// wheelchair parameters
+wheelchairFolder.add(anth, 'SEATWIDTH', 15, 25).name("Seat Width (in)").onChange(function(value) {
+    objparameterChanged = true;
+});
+wheelchairFolder.add(anth, 'SEATHEIGHT', 15, 25).name("Seat Height (in)").onChange(function(value) {
+    objparameterChanged = true;
+});
+wheelchairFolder.add(anth, 'FLOORHEIGHT', 15, 30).name("Seat Height from Floor (in)").onChange(function(value) {
+    objparameterChanged = true;
+});
+wheelchairFolder.add(anth, 'CAMBER', 0, 10).name("Camber (in)").onChange(function(value) {
+    objparameterChanged = true;
+});
+wheelchairFolder.add(anth, 'LEGLEN', 0, 10).name("Leg Length (in)").onChange(function(value) {
+    objparameterChanged = true;
+});
+wheelchairFolder.add(anth, 'LEGRESTANG', 60, 90).name("Leg Rest Angle (degree)").onChange(function(value) {
+    objparameterChanged = true;
+});
 
 
 
@@ -404,10 +437,12 @@ var save = function ( PCAdata, numAnth, numLm, filename ){
         'WaistCircumference',
         'HipCircumference',
         'UpperThighCircumference',
-        'ARMLEN',
-        'BACKHEIGHT',
         'SEATWIDTH',
         'SEATHEIGHT',
+        'CAMBER',
+        'LEGLEN',
+        'LEGRESTANG',
+        'FLOORHEIGHT',
     ];
         
     
@@ -561,7 +596,6 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
         }
 
         // Create material and mesh
-                
         var material = new THREE.MeshPhongMaterial({
             color: 0xffffff,
             specular: 0xaaaaaa, // Adjust specular color for shiny effect
@@ -590,123 +624,37 @@ function loadPLYFile(PLYposx,PLYposy,PLYposz) {
     });
 }
 
-// Function to load and add the new OBJ mesh to the scene, a wheelchair
-function loadAndAddOBJ(posx, posy, posz) {
-    const loader = new OBJLoader();
-    loader.load('_changes.obj', function (object) {
-        // Process OBJ object and create geometry
-        var geometry = new THREE.BufferGeometry();
 
-        var minX = Infinity;
-        var minY = Infinity;
-        var minZ = Infinity;
+// Function to load and update the OBJ mesh with new parameters
+function loadAndUpdateOBJ(posx, posy, posz, wheelchairParams) {
+    if (!objMesh) {
+        // Create the initial wheelchair mesh if it doesn't exist
+        let wheelchairModel = createWheelchair(wheelchairParams);
+        let wheelchairGeometry = CSG2Geom(wheelchairModel);
 
-        var maxX = -Infinity;
-        var maxY = -Infinity;
-        var maxZ = -Infinity;
-
-        object.traverse(function (child) {
-            if (child instanceof THREE.Mesh) {
-                objGeometry = child.geometry;
-                geometry = objGeometry;
-
-                var positions = geometry.attributes.position;
-                for (let i = 0; i < positions.count; i++) {
-                    var x = positions.getX(i);
-                    var y = positions.getY(i);
-                    var z = positions.getZ(i);
-
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    minZ = Math.min(minZ, z);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
-                    maxZ = Math.max(maxZ, z);
-                }
-            }
-        });
-
-        // console.log(minX-maxX, minY-maxY, minZ-maxZ);
-
-        // Create material for OBJ mesh
-        var material = new THREE.MeshPhongMaterial({
+        var wheelchairMaterial = new THREE.MeshPhongMaterial({
             color: 0xffffff,
             specular: 0xaaaaaa,
             shininess: 20,
             shading: THREE.SmoothShading
         });
 
-        // Remove the previous OBJ mesh if it exists
-        if (objMesh) {
-            scene.remove(objMesh);
-        }
-        // Ensure geometry normals are correct
-        if (!geometry.attributes.normal) {
-            geometry.computeVertexNormals();
-        }
-        
-        objMesh = new THREE.Mesh(geometry, material);
-        
-
-        // Calculate the center of the bounding box before scaling
-        var boundingBox = new THREE.Box3().setFromObject(objMesh);
-        var center = new THREE.Vector3();
-        boundingBox.getCenter(center);
-
-        // Calculate the size of the bounding box before scaling
-        var Anths = [anth.SEATWIDTH, anth.SEATHEIGHT, anth.ARMLEN];
-        var sizeX = Math.abs(maxX - minX);
-        var sizeY = Math.abs(maxY - minY);
-        var sizeZ = Math.abs(maxZ - minZ);
-
-        // Calculate the scaling factors
-        var scaleX = Anths[0] / sizeX;
-        var scaleY = Anths[1] / sizeY;
-        var scaleZ = Anths[2] / sizeZ;
-
-        // Apply the scaling factors
-        geometry.scale(scaleZ, scaleX, scaleY);
-
-
-        // Calculate the center of the bounding box before scaling
-        var boundingBoxAfter = new THREE.Box3().setFromObject(objMesh);
-        var centerAfter = new THREE.Vector3();
-        boundingBoxAfter.getCenter(centerAfter);
-
-
-        // console.log(center, centerAfter);
-        // console.log(scaleX, scaleY, scaleZ);
-
-        // Calculate the translation factors, z is the width, x is the height, y is the length due to rotation of object
-        var transX = 0;
-        var transY = 0;
-        var transZ = 0;
-        if (scaleX != 1){
-            transX = (center.y - centerAfter.y) * 0.001;
-        }
-        else if (scaleY != 1){
-            transY = (center.z - centerAfter.z) * 0.001;
-        }
-        else if (scaleZ != 1){
-            transZ = (center.x - centerAfter.x) * 0.001;
-        }
-
-        // console.log(transX, transY, transZ);
-
-        // Create the new mesh and assign it to objMesh
-        objMesh.scale.set(0.001, 0.001, 0.001);
-        objMesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
-        objMesh.position.set(posx - 0.3 + transX, posy - 0.7 + transY, posz + transZ);
-        // objMesh.position.set(posx - 0.3,  posy - 0.7, posz);
-
-        // Add the new mesh to the scene
+        objMesh = new THREE.Mesh(wheelchairGeometry, wheelchairMaterial);
+        objGeometry = wheelchairGeometry;
         scene.add(objMesh);
-    });
+    } else {
+        // Update the existing mesh with new parameters
+        let updatedWheelchairModel = createWheelchair(wheelchairParams);
+        let updatedWheelchairGeometry = CSG2Geom(updatedWheelchairModel);
+        objGeometry = updatedWheelchairGeometry;
+        objMesh.geometry = updatedWheelchairGeometry;
+    }
+
+    // Update the position, scale, and rotation
+    objMesh.position.set(posx - 0.3, posy - 0.7, posz);
+    objMesh.scale.set(0.001, 0.001, 0.001);
+    objMesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
 }
-
-
-
-
 
 
 // init function
@@ -771,7 +719,29 @@ function init(data) {
 
 
     // Load your OBJ file and Plyfile using a library like three.js
-    loadAndAddOBJ(controls.target.x, controls.target.y, controls.target.z);
+    const wheelchairParams = {
+        seatWidth: anth.SEATWIDTH,              // Width of the seat in inches
+        seatHeight: anth.SEATHEIGHT,            // Height of the seat from the floor in inches
+        wheelDiameter: 24,                      // Diameter of the wheelchair wheels in inches
+        seatToFloorHeight: anth.FLOORHEIGHT,    // Height of the seat from the floor in inches
+        showPushHandle: true,                   // Show Push Handle (true/false)
+        showArmrest: true,                      // Show Armrest (true/false)
+        camberAngle: anth.CAMBER,               // Camber angle of the wheels in degrees
+        tubeDiameter: 1,                        // Diameter of the wheelchair frame tubes in inches
+        tubeThickness: 0.1,                     // Thickness of the wheelchair frame tubes in inches
+        tubeAngle: 15,                          // Angle of the frame tubes from vertical in degrees
+        smallWheelDiameter: 6,                  // Diameter of the small front wheels in inches
+        smallWheelWidth: 1,                     // Width of the small front wheels in inches
+        wheelHandleThickness: 0.25,             // Thickness of the wheel handles in inches
+        seatCushThick : 4,                      // Thickness of the seat cushion in inches
+        legrestLength: anth.LEGLEN,             // Legrest Length in inches
+        legrestAngle: anth.LEGRESTANG,          // Legrest Angle in degrees
+        seatToBackrestAngle: 90,                // Angle between the seat and backrest in degrees
+        castorForkAngle: 90,                    // Castor Fork Angle in degrees
+        footrestLinkLength: 12,                 // Footrest Link Length in inches
+        wheelThickness: 1,                      // Thickness of the wheelchair wheels in inches
+    };
+    loadAndUpdateOBJ(controls.target.x, controls.target.y, controls.target.z, wheelchairParams);
     loadPLYFile(controls.target.x, controls.target.y -0.08, controls.target.z+0.03);
     // Update controls to apply changes
     controls.update();
@@ -880,9 +850,7 @@ function animate() {
     light2.position.z = camera.position.z;
 
 
-    if(oldStt != anth.STATURE || oldBMI != anth.BMI 
-        || oldGen != anth.GENDER|| oldAge != anth.AGE
-        || oldSHS != anth.SHS || oldStd != anth.STUDY)
+    if(plyParameterChanged)
     {
         
         gui.__controllers[1].updateDisplay();
@@ -895,27 +863,50 @@ function animate() {
         oldStd = anth.STUDY;
         
         // load PLY file;
-        // loadPLYFile(controls.target.x, controls.target.y -0.08, controls.target.z+0.03)
         updatePLYGeometry(anth, plyGeometry, geometryZero, PCAdata, predAnthNum, predLandmarkNum);
+        // Reset the flag
+        plyParameterChanged = false;
     }
 
-    if (oldSEATHEIGHT != anth.SEATHEIGHT || 
-        oldWidth != anth.ARMLEN ||
-        oldBackHeight != anth.BACKHEIGHT || 
-        oldSEATWIDTH != anth.SEATWIDTH) {
-    
+    if (objparameterChanged) {
         gui.__controllers[1].updateDisplay();
 
         oldSEATHEIGHT = anth.SEATHEIGHT;
-        oldWidth = anth.ARMLEN;
-        oldBackHeight = anth.BACKHEIGHT;
+        oldFLOORHEIGHT = anth.FLOORHEIGHT;
+        oldLEGLEN = anth.LEGLEN;
+        oldCAMBER = anth.CAMBER;
+        oldLEGRESTANG = anth.LEGRESTANG;
         oldSEATWIDTH = anth.SEATWIDTH;
 
-        loadAndAddOBJ(controls.target.x, controls.target.y, controls.target.z);
-        // console.log(scaleX, scaleY, scaleZ);
-            
-    }
+        console.log("wheelchair parameters changed");
 
+        const wheelchairParams = {
+            seatWidth: anth.SEATWIDTH,              // Width of the seat in inches
+            seatHeight: anth.SEATHEIGHT,            // Height of the seat from the floor in inches
+            wheelDiameter: 24,                      // Diameter of the wheelchair wheels in inches
+            seatToFloorHeight: anth.FLOORHEIGHT,    // Height of the seat from the floor in inches
+            showPushHandle: true,                   // Show Push Handle (true/false)
+            showArmrest: true,                      // Show Armrest (true/false)
+            camberAngle: anth.CAMBER,               // Camber angle of the wheels in degrees
+            tubeDiameter: 1,                        // Diameter of the wheelchair frame tubes in inches
+            tubeThickness: 0.1,                     // Thickness of the wheelchair frame tubes in inches
+            tubeAngle: 15,                          // Angle of the frame tubes from vertical in degrees
+            smallWheelDiameter: 6,                  // Diameter of the small front wheels in inches
+            smallWheelWidth: 1,                     // Width of the small front wheels in inches
+            wheelHandleThickness: 0.25,             // Thickness of the wheel handles in inches
+            seatCushThick : 4,                      // Thickness of the seat cushion in inches
+            legrestLength: anth.LEGLEN,             // Legrest Length in inches
+            legrestAngle: anth.LEGRESTANG,          // Legrest Angle in degrees
+            seatToBackrestAngle: 90,                // Angle between the seat and backrest in degrees
+            castorForkAngle: 90,                    // Castor Fork Angle in degrees
+            footrestLinkLength: 12,                 // Footrest Link Length in inches
+            wheelThickness: 1,                      // Thickness of the wheelchair wheels in inches
+        };
+
+        loadAndUpdateOBJ(controls.target.x, controls.target.y, controls.target.z, wheelchairParams);
+        // Reset the flag
+        objparameterChanged = false;
+    }
     // Mouse tooltip
     renderer.clear();
     renderer.render( scene, camera );
